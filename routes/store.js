@@ -8,9 +8,7 @@ router.get("/list", storeMapper.list);
 router.get("/promote", (req, res) => {
   res.json(result([]));
 });
-router.get("/charts", (req, res) => {
-  res.json(result([]));
-});
+router.get("/charts", storeMapper.charts);
 router.get("/query", (req, res) => {
   res.json(result([]));
 });
