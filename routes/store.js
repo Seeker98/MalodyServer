@@ -5,11 +5,9 @@ const { result } = require("../entity/result");
 const storeMapper = require("../controller/controller");
 
 router.get("/list", storeMapper.list);
-router.get("/promote", (req, res) => {
-  res.json(result([]));
-});
 router.get("/charts", storeMapper.charts);
-router.get("/query", (req, res) => {
+router.get("/query", storeMapper.query);
+router.get("/promote", (req, res) => {
   res.json(result([]));
 });
 router.get("/download", (req, res) => {

@@ -7,6 +7,41 @@ const Charts = db.Charts;
 //一页返回12个
 const pageSize = 12;
 
+//指定查询
+exports.query = async (req, res) => {
+  const params = req.query;
+  console.log(req.query);
+  const [sid, cid, org] = [
+    params.sid ? Number(params.sid) : undefined,
+    params.cid ? Number(params.cid) : undefined,
+    params.org ? Number(params.org) : 0,
+  ];
+  let sids = [];
+  if (sid) sids.push(sid);
+  if (cid) {
+    let attrsList = ["sid"];
+    Charts.findAll({
+      where: {
+        cid: { [Op.eq]: cid },
+      },
+      attributes: attrsList,
+    }).then((charts) => {
+      charts.forEach((chart) => sids.push(chart.sid));
+    });
+  }
+  let attrsList = ["sid", "cover", "length", "bpm", "title", "artist", "time"];
+  if (org) attrsList.push("orgTitle");
+  let songList = await Songs.findAll({
+    where: {
+      sid: { [Op.in]: sids },
+    },
+    attributes: attrsList,
+  });
+  // const hasMore = songList.length >= pageSize;
+  // const next = hasMore ? from + 1 : from;
+  res.json(result(false, 0, songList));
+};
+
 //谱面列表
 exports.charts = async (req, res) => {
   const params = req.query;
@@ -40,7 +75,7 @@ exports.charts = async (req, res) => {
     offset: from * pageSize,
     limit: pageSize,
   });
-  const hasMore = songList.length >= pageSize;
+  const hasMore = chartList.length >= pageSize;
   const next = hasMore ? from + 1 : from;
   res.json(result(hasMore, next, chartList));
 };
@@ -54,8 +89,8 @@ exports.list = async (req, res) => {
     params?.word,
     params?.org,
     params?.mode ? Number(params.mode) : 0,
-    params?.lvge,
-    params?.lvle,
+    params?.lvge ? Number(params.lvge) : undefined,
+    params?.lvle ? Number(params.lvle) : undefined,
     params?.beta ? params.beta : 0,
     params?.from ? params.from : 0,
   ];
