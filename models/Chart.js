@@ -15,7 +15,6 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.INTEGER,
       size: Sequelize.BIGINT,
       mode: Sequelize.INTEGER,
-      beta: Sequelize.INTEGER,
     },
     { modelName: "Chart", timestamps: false }
   );

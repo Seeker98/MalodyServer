@@ -67,7 +67,7 @@ exports.charts = async (req, res) => {
   //谱面查询条件
   let cond = {};
   cond.sid = { [Op.eq]: sid };
-  if (!beta) cond.beta = { [Op.eq]: 0 };
+  if (!beta) cond.type = { [Op.gt]: 1 };
   if (mode) cond.mode = { [Op.eq]: mode };
   let chartList = await Charts.findAll({
     where: cond,
@@ -104,6 +104,7 @@ exports.list = async (req, res) => {
     attributes: attrsList,
     offset: from * pageSize,
     limit: pageSize,
+    order: ["sid"],
   });
 
   let sidArr = [];
@@ -118,7 +119,7 @@ exports.list = async (req, res) => {
     [Op.gte]: lvge ? lvge : -1,
     [Op.lte]: lvle ? lvle : 1000,
   };
-  if (!beta) chartCond.beta = { [Op.eq]: 0 };
+  if (!beta) chartCond.type = { [Op.gt]: 1 };
   chartCond.sid = { [Op.in]: sidArr };
   Charts.findAll({
     where: chartCond,
