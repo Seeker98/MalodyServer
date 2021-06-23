@@ -11,6 +11,7 @@ router.get("/promote", (req, res) => {
   res.json(result([]));
 });
 router.get("/download", (req, res) => {
+  console.log(req.query);
   res.json(result([]));
 });
 router.get("/events", (req, res) => {

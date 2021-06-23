@@ -3,21 +3,26 @@ const app = express();
 require("dotenv/config");
 const mStore = require("./routes/store");
 
-const bodyParser = require("body-parser");
+// Serve files
+app.use("/storage", express.static(process.env.file_path));
+// handle json and x-www-form-urlencoded body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// handle multipart/form-data body
 app.use(require("express-fileupload")());
-
+// log request method and route
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
   next();
 });
 
 const db = require("./models/db");
-db.sequelize.sync({ alter: true, benchmark: true });
+db.sequelize.sync({ alter: true, benchmark: true, logging: false });
 app.use("/api/store", mStore);
 
 app.get("/", (req, res) => {
-  res.send("hello");
+  res.send("Hello Seeker, when will you release Malody V store server?");
 });
-app.listen(43927, () => console.log("listening on 43927"));
+app.listen(process.env.server_port, () =>
+  console.log(`Listening on ${process.env.server_port}`)
+);

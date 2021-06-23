@@ -6,9 +6,6 @@ const path = require("path");
 require("dotenv/config");
 
 router.post("/sign", (req, res) => {
-  // fs.readdir(process.env.file_path, (err, files) => {
-  //   console.log(files);
-  // });
   const [sid, cid, fileNames, fileHashes] = [
     req.body.sid,
     req.body.cid,
@@ -33,12 +30,21 @@ router.post("/sign", (req, res) => {
   res.send(resultSignQuick(meta));
 });
 router.post("/finish", (req, res) => {
-  // console.log(req.body);
+  // todo 验证文件
   res.send({ code: 0 });
 });
 router.post("/fuckwoc", async (req, res) => {
-  // console.log(req.files.file);
-  const [sid, file] = [req.body.sid, req.body.file];
+  //todo添加新sid
+  console.log(req.files.file);
+  console.log(req.body);
+  const [sid, cid, hash, file, size] = [
+    req.body.sid,
+    req.body.cid,
+    req.body.hash,
+    req.body.file,
+    req.files.file.size,
+  ];
+  console.log(`${size} is ${typeof size}`);
   //创建歌曲目录
   checkDir(sid).then(() => {
     fs.writeFile(
@@ -52,9 +58,39 @@ router.post("/fuckwoc", async (req, res) => {
         console.log(`Write file ${file} success.`);
       }
     );
+    updateDatabase(sid, cid, hash, file, size);
     res.send();
   });
 });
+
+const db = require("../models/db");
+const Files = db.Files;
+const updateDatabase = (sid, cid, hash, file, size) => {
+  //同一个sid中，文件名不改变则视为同一个文件。需测试
+  const cond = {
+    sid: Number(sid),
+    name: String(file),
+  };
+  Files.findOne({ where: cond }).then((item) => {
+    if (!item) {
+      const newfile = Files.build({
+        sid: Number(sid),
+        name: String(file),
+        cid: Number(cid),
+        hash: String(hash),
+        size: Number(size),
+        time: new Date().getTime(),
+      });
+      newfile.save();
+    } else {
+      item.cid = Number(cid);
+      item.hash = String(hash);
+      item.size = Number(size);
+      item.time = new Date().getTime();
+      item.save();
+    }
+  });
+};
 
 const fs_p = require("fs/promises");
 const checkDir = async (sid) => {

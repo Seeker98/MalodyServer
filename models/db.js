@@ -8,6 +8,8 @@ const sequelize = new Sequelize({
 
 db.Songs = require("./Song")(sequelize, Sequelize);
 db.Charts = require("./Chart")(sequelize, Sequelize);
+db.Events = require("./Event")(sequelize, Sequelize);
+db.Files = require("./File")(sequelize, Sequelize);
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
