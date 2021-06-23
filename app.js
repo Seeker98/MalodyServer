@@ -2,6 +2,8 @@ const express = require("express");
 const app = express();
 require("dotenv/config");
 const mStore = require("./routes/store");
+const fs = require("fs");
+const path = require("path");
 
 // Serve files
 app.use("/storage", express.static(process.env.file_path));
@@ -14,6 +16,17 @@ app.use(require("express-fileupload")());
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
   next();
+});
+// create file storage path
+fs.access(path.join(process.env.file_path), (err) => {
+  if (err) {
+    console.log(err);
+    console.log(`No file path, creating...`);
+    fs.mkdir(path.join(process.env.file_path), (err) => {
+      if (err) console.log(err);
+    });
+  }
+  console.log(`File path exists OK`);
 });
 
 const db = require("./models/db");
