@@ -28,6 +28,17 @@ fs.access(path.join(process.env.file_path), (err) => {
   }
   console.log(`File path exists OK`);
 });
+// create temp path
+fs.access(path.join(process.env.temp_path), (err) => {
+  if (err) {
+    console.log(err);
+    console.log(`No temp path, creating...`);
+    fs.mkdir(path.join(process.env.temp_path), (err) => {
+      if (err) console.log(err);
+    });
+  }
+  console.log(`Temp path exists OK`);
+});
 
 const db = require("./models/db");
 db.sequelize.sync({ alter: true, benchmark: true, logging: false });

@@ -41,31 +41,18 @@ router.post("/fuckwoc", async (req, res) => {
     req.body.file,
     req.files.file.size,
   ];
+  //无论如何都应该更新文件信息
+  updateFileDatabase(sid, cid, hash, file, size);
   //如果是谱面，添加信息
   if (isChart(file)) {
-    updateChartDatabase(sid, cid);
+    const [songInfo, chartInfo] = getInfoFromMc(req.files.file.data);
+    updateChartDatabase(chartInfo, sid);
+    updateSongDatabase(songInfo);
   }
   //如果是图片，更新图片
-  const flag = checkPic(req.files.file.data.toString("hex", 0, 4));
-  //更新歌曲db
-  Songs.findOne({ where: { sid: Number(sid) } }).then((res) => {
-    if (!res) {
-      console.log(`sid ${sid} not exist, creating`);
-      let attrs = {
-        sid: Number(sid),
-        title: `s${sid}`,
-        orgTitle: `s${sid}`,
-        time: Math.floor(new Date().getTime() / 1000),
-      };
-      if (flag) attrs.cover = file;
-      const newSong = Songs.build(attrs);
-      newSong.save();
-    } else {
-      res.time = Math.floor(new Date().getTime() / 1000);
-      if (flag) res.cover = file;
-      res.save();
-    }
-  });
+  if (isPic(req.files.file.data.toString("hex", 0, 4))) {
+    updateSongBg(sid, file);
+  }
 
   //创建歌曲目录
   checkDir(sid).then(() => {
@@ -80,48 +67,102 @@ router.post("/fuckwoc", async (req, res) => {
         console.log(`Write file ${file} success.`);
       }
     );
-    updateDatabase(sid, cid, hash, file, size);
     res.send();
   });
 });
 
-const updateChartDatabase = (sid, cid) => {
+const getInfoFromMc = (fileBuffer) => {
+  const admZip = require("adm-zip");
+  const zip = new admZip(fileBuffer).getEntries();
+  const data = zip[0].getData().toString("utf-8").trim();
+  const mc = JSON.parse(data);
+  const songInfo = {
+    sid: mc.meta.song.id,
+    title: mc.meta.song.title,
+    artist: mc.meta.song.artist,
+    bpm: mc.meta.song.bpm,
+  };
+  const chartInfo = {
+    cid: mc.meta.id,
+    creator: mc.meta.creator,
+    version: mc.meta.version,
+    mode: mc.meta.mode,
+  };
+  return [songInfo, chartInfo];
+};
+
+const updateSongBg = (sid, file) => {
   const cond = {
-    cid: cid,
+    sid: sid,
+  };
+  Songs.findOne({ where: cond }).then((res) => {
+    if (!res) {
+      const newSong = Songs.build({
+        sid: sid,
+        cover: file,
+      });
+      newSong.save();
+    } else {
+      res.cover = file;
+      res.save();
+    }
+    console.log(`Updated sid=${sid} bg file ${file}`);
+  });
+};
+
+const updateChartDatabase = (chartInfo, sid) => {
+  const cond = {
+    cid: chartInfo.cid,
   };
   Charts.findOne({ where: cond }).then((res) => {
     if (!res) {
       const newChart = Charts.build({
-        cid: cid,
+        cid: chartInfo.cid,
         sid: sid,
+        creator: chartInfo.creator,
+        version: chartInfo.version,
+        mode: chartInfo.mode,
       });
       newChart.save();
     } else {
-      //todo updatechartinfo
+      res.creator = chartInfo.creator;
+      res.version = chartInfo.version;
+      res.mode = chartInfo.mode;
+      res.save();
     }
-    console.log(`Updated chart db sid=${sid}, cid=${cid}`);
+    console.log(`Updated chart db sid=${sid}, cid=${chartInfo.cid}`);
   });
 };
 
-const isChart = (file) => {
-  const re = /.mc$/;
-  return re.exec(file);
-};
-
-const checkPic = (dataHead) => {
-  const magic = {
-    jpg: "ffd8ffe0",
-    png: "89504e47",
-    gif: "47494638",
-  };
-  return (
-    dataHead == magic.jpg || dataHead == magic.png || dataHead == magic.gif
-  );
+const updateSongDatabase = (songInfo) => {
+  //更新歌曲db
+  Songs.findOne({ where: { sid: Number(songInfo.sid) } }).then((res) => {
+    if (!res) {
+      console.log(`sid ${songInfo.sid} not exist, creating`);
+      let attrs = {
+        sid: Number(songInfo.sid),
+        title: songInfo.title,
+        orgTitle: songInfo.title,
+        artist: songInfo.artist,
+        bpm: songInfo.bpm,
+        time: Math.floor(new Date().getTime() / 1000),
+      };
+      const newSong = Songs.build(attrs);
+      newSong.save();
+    } else {
+      res.title = songInfo.title;
+      res.orgTitle = songInfo.title;
+      res.artist = songInfo.artist;
+      res.bpm = songInfo.bpm;
+      res.time = Math.floor(new Date().getTime() / 1000);
+      res.save();
+    }
+  });
 };
 
 const db = require("../models/db");
 const Files = db.Files;
-const updateDatabase = (sid, cid, hash, file, size) => {
+const updateFileDatabase = (sid, cid, hash, file, size) => {
   //同一个sid中，文件名不改变则视为同一个文件。需测试
   const cond = {
     sid: Number(sid),
@@ -162,4 +203,21 @@ const checkDir = async (sid) => {
       .catch((err) => console.log(`mkdir error: ${err}`));
   });
 };
+
+const isChart = (file) => {
+  const re = /.mc$/;
+  return re.exec(file);
+};
+
+const isPic = (dataHead) => {
+  const magic = {
+    jpg: "ffd8ffe0",
+    png: "89504e47",
+    gif: "47494638",
+  };
+  return (
+    dataHead == magic.jpg || dataHead == magic.png || dataHead == magic.gif
+  );
+};
+
 module.exports = router;
