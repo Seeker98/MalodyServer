@@ -13,4 +13,13 @@ function result(hasMore, next, data) {
   };
   return result;
 }
-module.exports = { result };
+function downloadResult(code, items, sid, cid) {
+  const result = {
+    code,
+    items,
+    sid,
+    cid,
+  };
+  return result;
+}
+module.exports = { result, downloadResult };

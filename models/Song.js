@@ -7,11 +7,20 @@ module.exports = (sequelize, Sequelize) => {
         unique: true,
       },
       cover: Sequelize.STRING,
-      length: Sequelize.INTEGER,
-      bpm: Sequelize.FLOAT,
+      length: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0,
+      },
+      bpm: {
+        type: Sequelize.FLOAT,
+        defaultValue: 120,
+      },
       // mode: Sequelize.INTEGER,
       title: Sequelize.STRING,
-      artist: Sequelize.STRING,
+      artist: {
+        type: Sequelize.STRING,
+        defaultValue: "",
+      },
       orgTitle: Sequelize.STRING,
       time: Sequelize.BIGINT,
     },

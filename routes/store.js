@@ -10,10 +10,7 @@ router.get("/query", storeMapper.query);
 router.get("/promote", (req, res) => {
   res.json(result([]));
 });
-router.get("/download", (req, res) => {
-  console.log(req.query);
-  res.json(result([]));
-});
+router.get("/download", storeMapper.download);
 router.get("/events", (req, res) => {
   res.json(result([]));
 });

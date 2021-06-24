@@ -1,11 +1,42 @@
 const db = require("../models/db");
-const { result } = require("../entity/result");
+const { result, downloadResult } = require("../entity/result");
 const { Op } = require("sequelize");
 const Songs = db.Songs;
 const Charts = db.Charts;
+const Files = db.Files;
+const urlJoin = require("url-join");
+require("dotenv/config");
 
 //一页返回12个
 const pageSize = 12;
+
+exports.download = async (req, res) => {
+  const params = req.query;
+  const cid = params.cid;
+  const cond = {
+    cid: cid,
+  };
+  const attrs = ["sid", "cid", "name", "hash"];
+  let downloadList = await Files.findAll({ where: cond, attributes: attrs });
+  if (!downloadList) {
+    res.send(downloadResult(-2, [], 0, 0));
+    return;
+  }
+  let items = [];
+  downloadList.forEach((file) => {
+    items.push({
+      name: file.name,
+      hash: file.hash,
+      file: urlJoin(
+        `http://${process.env.server_addr}:${process.env.server_port}`,
+        "storage",
+        String(file.sid),
+        String(file.name)
+      ),
+    });
+  });
+  res.json(downloadResult(0, items, downloadList[0].sid, downloadList[0].cid));
+};
 
 //指定查询
 exports.query = async (req, res) => {
@@ -111,6 +142,12 @@ exports.list = async (req, res) => {
   songList.forEach((song) => {
     song.mode = 0;
     sidArr.push(song.sid);
+    song.cover = urlJoin(
+      `http://${process.env.server_addr}:${process.env.server_port}`,
+      "storage",
+      String(song.sid),
+      String(song.cover)
+    );
   });
   //谱面查询条件
   let chartCond = {};

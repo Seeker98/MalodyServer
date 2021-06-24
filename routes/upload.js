@@ -34,9 +34,6 @@ router.post("/finish", (req, res) => {
   res.send({ code: 0 });
 });
 router.post("/fuckwoc", async (req, res) => {
-  //todo添加新sid
-  console.log(req.files.file);
-  console.log(req.body);
   const [sid, cid, hash, file, size] = [
     req.body.sid,
     req.body.cid,
@@ -44,7 +41,32 @@ router.post("/fuckwoc", async (req, res) => {
     req.body.file,
     req.files.file.size,
   ];
-  console.log(`${size} is ${typeof size}`);
+  //如果是谱面，添加信息
+  if (isChart(file)) {
+    updateChartDatabase(sid, cid);
+  }
+  //如果是图片，更新图片
+  const flag = checkPic(req.files.file.data.toString("hex", 0, 4));
+  //更新歌曲db
+  Songs.findOne({ where: { sid: Number(sid) } }).then((res) => {
+    if (!res) {
+      console.log(`sid ${sid} not exist, creating`);
+      let attrs = {
+        sid: Number(sid),
+        title: `s${sid}`,
+        orgTitle: `s${sid}`,
+        time: Math.floor(new Date().getTime() / 1000),
+      };
+      if (flag) attrs.cover = file;
+      const newSong = Songs.build(attrs);
+      newSong.save();
+    } else {
+      res.time = Math.floor(new Date().getTime() / 1000);
+      if (flag) res.cover = file;
+      res.save();
+    }
+  });
+
   //创建歌曲目录
   checkDir(sid).then(() => {
     fs.writeFile(
@@ -63,14 +85,50 @@ router.post("/fuckwoc", async (req, res) => {
   });
 });
 
+const updateChartDatabase = (sid, cid) => {
+  const cond = {
+    cid: cid,
+  };
+  Charts.findOne({ where: cond }).then((res) => {
+    if (!res) {
+      const newChart = Charts.build({
+        cid: cid,
+        sid: sid,
+      });
+      newChart.save();
+    } else {
+      //todo updatechartinfo
+    }
+    console.log(`Updated chart db sid=${sid}, cid=${cid}`);
+  });
+};
+
+const isChart = (file) => {
+  const re = /.mc$/;
+  return re.exec(file);
+};
+
+const checkPic = (dataHead) => {
+  const magic = {
+    jpg: "ffd8ffe0",
+    png: "89504e47",
+    gif: "47494638",
+  };
+  return (
+    dataHead == magic.jpg || dataHead == magic.png || dataHead == magic.gif
+  );
+};
+
 const db = require("../models/db");
 const Files = db.Files;
 const updateDatabase = (sid, cid, hash, file, size) => {
   //同一个sid中，文件名不改变则视为同一个文件。需测试
   const cond = {
     sid: Number(sid),
+    cid: Number(cid),
     name: String(file),
   };
+  //update file db
   Files.findOne({ where: cond }).then((item) => {
     if (!item) {
       const newfile = Files.build({
@@ -79,20 +137,21 @@ const updateDatabase = (sid, cid, hash, file, size) => {
         cid: Number(cid),
         hash: String(hash),
         size: Number(size),
-        time: new Date().getTime(),
+        time: Math.floor(new Date().getTime() / 1000),
       });
       newfile.save();
     } else {
-      item.cid = Number(cid);
       item.hash = String(hash);
       item.size = Number(size);
-      item.time = new Date().getTime();
+      item.time = Math.floor(new Date().getTime() / 1000);
       item.save();
     }
+    console.log(`Updated file db sid=${sid}, filename=${file}`);
   });
 };
 
 const fs_p = require("fs/promises");
+const { Songs, Charts } = require("../models/db");
 const checkDir = async (sid) => {
   await fs_p.access(path.join(process.env.file_path, sid)).catch((err) => {
     console.log(`access error: ${err}`);
